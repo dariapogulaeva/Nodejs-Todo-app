@@ -1,47 +1,40 @@
  var bodyParser = require('body-parser');
- var mongoose = require('mongoose');
+ var model = require('../datastore');
 
  var urlencodeparser = bodyParser.urlencoded({ extended: false });
 
- mongoose.connect('mongodb+srv://admin:text123@cluster0.cqnll.mongodb.net/app_data?retryWrites=true&w=majority');
-
- //Schema
- todoSchema = new mongoose.Schema({ item: String });
- //Model
- var Todo = mongoose.model('Todo', todoSchema);
-
-
  module.exports = function(app) {
 
-     app.get('/', function(req, res) {
-
-         Todo.find({}, function(err, data) {
-             if (err) throw err;
-             res.render('index', { todos: data });
-
+     app.get('/', function(req, res, next) {
+         model.list().then(data => {
+             console.log(data);
+             res.render('index', {
+                 todos: data.tasks
+             });
+         }).catch(err => {
+             next(err);
+             return;
          });
-
-
      });
 
-     app.post('/', urlencodeparser, function(req, res) {
-         var newTodo = Todo({ item: req.body.todo_content }).save(function(err, data) {
-             if (err) throw err;
-
-             console.log('Item saved');
-             res.redirect('/');
-         });
-
-
-
-
+     app.post('/', urlencodeparser, function(req, res, next) {
+         model.create(req.body.todo_content)
+             .then(entity => {
+                 console.log('Item saved');
+                 res.redirect('/')
+             })
+             .catch(err => {
+                 next(err);
+                 return;
+             });
      });
-     app.get('/todo/:id', function(req, res) {
-         console.log(req.params.id);
-         Todo.findByIdAndDelete(req.params.id, function(err) {
-             if (err) console.log(err);
-             console.log("Successful deletion");
+
+     app.get('/todo/:id', function(req, res, next) {
+         model.remove(req.params.id).then(() => {
              res.redirect('/');
+         }).catch(err => {
+             next(err);
+             return;
          });
      });
  };
